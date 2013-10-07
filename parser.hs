@@ -1,23 +1,35 @@
 import Text.ParserCombinators.Parsec
 
+-- can now parse a small function:
+-- parse parseFunction "bla" "public function hi(args) {plus(3,4)\nmin(2,3)\nx=3\n}"
+
 type Qualifier = String
 type FunctionName = String
-type Body = String
+--type Body = String
 
-data Arguments = Maybe String | Nothing
+data Body = Body [Statement]
+    deriving (Show)
 
-data Function = Function Qualifier FunctionName Body
+data Arguments = Arguments [String]
+    deriving (Show)
+
+data Statement = Assignment String String
+               | Invocation String
+    deriving (Show)
+
+data Function = Function Qualifier FunctionName Arguments Body
     deriving (Show)
 
 parseFunction :: Parser Function 
 parseFunction = do
         qualifier <- many1 (noneOf " ")
-        char ' '
+        spaces
         string "function "
-        name <- many1 (noneOf " \n{")
-        parsePossibleWhitespace
+        name <- many1 (noneOf "(")
+        arguments <- parseArguments
+        spaces
         body <- parseBody
-        return $ Function qualifier name body
+        return $ Function qualifier name arguments body
 
 parseWhitespace :: Parser String
 parseWhitespace = many1 (oneOf " ")
@@ -26,21 +38,54 @@ parsePossibleWhitespace :: Parser String
 parsePossibleWhitespace = many (oneOf " ")
 
 parseArguments :: Parser Arguments 
-parseArguments = Arguments Nothing
+parseArguments = do
+    char '('
+    args <- many (noneOf ")")
+    char ')'
+    return $ Arguments [args]
 
-parseBody :: Parser String
-parseBody = parseCurlyBlock
+parseBody :: Parser Body
+parseBody = do
+        char '{'
+        statements <- many1 parseStatement
+        char '}'
+        return $ Body statements
 
-parseMultilineString :: Parser String
-parseMultilineString = many (oneOf "\n abcdefghijklmnopqrstuvwxyz")
+parseTester :: Parser Body
+parseTester = do 
+        char '{'
+        x <- many1 parseStatement
+        return $ Body x
 
-parseCurlyBlock :: Parser String
-parseCurlyBlock = parseBlock '{' '}'
+parseStatement :: Parser Statement
+parseStatement = do
+            x <- try parseInvocation <|> try parseAssignment <?> "statement"
+            return x
 
-parseBlock :: Char -> Char -> Parser String
-parseBlock x y = do
-        char x
-        content <- parseMultilineString
-        char y
-        return content
+parseInvocation :: Parser Statement
+parseInvocation = do
+        spaces
+        name <- many1 (noneOf " (")
+        spaces
+        char '('
+        spaces
+        bla <- many1 (noneOf " )")
+        spaces
+        char ')'
+        char '\n'
+        return $ Invocation name
+
+parseAssignment :: Parser Statement
+parseAssignment = do
+        spaces
+        var <- many1 (noneOf " =")
+        spaces
+        char '=' <?> "equal in assignment"
+        spaces
+        value <- many1 (noneOf "\n")
+        char '\n'
+        spaces
+        return $ Assignment var value
+
+
 
