@@ -13,6 +13,7 @@ data ActionType = FoulCommit
     deriving (Show)
 
 data Event = Time String
+           | 
            | Action String ActionType
            | Unknown String
            | Error [String]
@@ -107,6 +108,15 @@ parseFoulCommit = do
             string "foul"
             s <- many (noneOf "\n")
             return $ ActionType foulCommitPlayer
+
+parseSubstitution :: Parser String
+parseSubstitution = do
+            s <- many (oneOf "ABCDEFGHIJKLMNOPQRSTUVWXYZ -")
+            s1 <- many (noneOf " ")
+            string " replaces "
+            s2 <- many (noneOf "\n")
+            return s
+
 parseFoulAgainst :: Parser ActionType
 parseFoulAgainst = do
             string "foul against"
