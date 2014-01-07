@@ -13,7 +13,6 @@ data ActionType = FoulCommit
     deriving (Show)
 
 data Event = Time String
-           | 
            | Action String ActionType
            | Unknown String
            | Error [String]
